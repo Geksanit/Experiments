@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>L2</title>
+	<link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="Stats-output"></div>
+<canvas id="draw"></canvas>
+<script src="stats.min.js"></script>
+<script src="dat.gui.min.js"></script>
+<script>
+//для сайта quarz.ucoz.ru
+
+//Stats
+/*{
+	function initStats() {
+	var stats = new Stats();
+	stats.setMode(0);
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.left = '0px';
+	stats.domElement.style.top = '0px';
+	//document.getElementById("Stats-output").append(stats.domElement );
+	return stats;
+	}
+	var stats = initStats();
+}*/
+//GUI
+{
+	var gui = new dat.GUI();
+	var effectController = {
+	G:0.1,
+	grav: 50,
+	antigrav: 50,
+	}
+	gui.add(effectController,'G',0,1,0.05);
+	gui.add(effectController,'grav',1,100,10);
+	gui.add(effectController,'antigrav',1,100,10);
+	var button1 = {
+		addAtom: function() {addAtom();}
+	}
+	var button2 = {
+		removeAtom: function() {removeAtom();}
+	}
+	gui.add( button1, 'addAtom' );
+	gui.add( button2, 'removeAtom' );
+
+}
+
+//инициализация контекста
+{
+	draw.width=window.innerWidth;//длина и ширина полотна
+	draw.height=window.innerHeight;
+	z=draw.getContext("2d");//контекст
+}
+//настройки отображения
+{
+	Set={
+		Color : 'rgba(0,0,0,0.1)',
+		W: window.innerWidth,
+		H: window.innerHeight,
+		G: 0.01,
+	};
+	length  = 6;
+	metr = 50;
+	stars = [];
+	z.lineWidth = 1;
+};
+//функции
+{
+	function telescope()
+	{
+		z.fillStyle = Set.Color;
+		z.fillRect(0, 0, Set.W, Set.H);
+	};
+	function print()
+	{
+		for (i = 0; i < stars.length; i++){
+			z.beginPath();
+			z.arc(stars[i].x,stars[i].y,5,0,Math.PI*2,false);
+			z.fillStyle = stars[i].color;
+			z.fill();
+		}
+	}
+	function init_Structure()
+	{	
+		for (i = 0; i < length; i++){
+			stars[i] = {
+				vx: 0,
+				vy: 0,
+				x : Math.random()*(Set.W -20)+10, 
+				y : Math.random()*(Set.H -20)+10,
+				color: 'rgba(255, 255, 255, 1)',
+				mass: 1,
+			}
+		}
+	}
+	function addAtom(){
+		stars[stars.length] = {
+			vx: 0,
+			vy: 0,
+			x : Math.random()*(Set.W -20)+10, 
+			y : Math.random()*(Set.H -20)+10,
+			color: 'rgba(255, 255, 255, 1)',
+			mass: 1,
+		}
+	}
+	function removeAtom(){
+		stars.pop();
+	}
+	function GenC()//цвет
+	{
+		r = Math.random(205)+50;
+		g = Math.random(205)+50;
+		b = Math.random(205)+50;
+		return 'rgb('+r.toString(10)+',' + g.toString(10)+',' + b.toString(10)+')';
+	};
+	function gravy()
+	{
+		for (i = 0; i < stars.length; i++){
+			for(j = i+1; j < stars.length; j++){
+				var sx,sy,s,S,g;
+				sx=stars[i].x-stars[j].x;
+				sy=stars[i].y-stars[j].y;
+				s=(sx*sx+sy*sy);//r**2
+				S=Math.sqrt(s);//r
+				
+				d=(effectController.antigrav*effectController.antigrav)/(s);
+				g=(s)/(effectController.grav*effectController.grav);
+				
+				
+				stars[j].vx+=(sx/Math.abs(sx))*effectController.G*(g-d);
+				stars[j].vy+=(sy/Math.abs(sy))*effectController.G*(g-d);
+			
+				stars[i].vx-=(sx/Math.abs(sx))*effectController.G*(g-d);
+				stars[i].vy-=(sy/Math.abs(sy))*effectController.G*(g-d);	
+			}
+			//if (stars[i].vx>5){stars[i].vx=5}
+			//if (stars[i].vy>5){stars[i].vy=5}
+			stars[i].x+=stars[i].vx; stars[i].vx*=0.9;
+			stars[i].y+=stars[i].vy; stars[i].vy*=0.9;
+		}
+	}
+};
+
+//анимация
+function anim()
+{
+	window.requestAnimationFrame(anim);
+	//stats.update(); 
+	telescope();
+	print();
+	gravy();
+};
+//вызов анимации
+init_Structure();
+anim();
+</script>
+</body>
+</html>

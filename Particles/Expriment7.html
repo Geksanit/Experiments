@@ -1,0 +1,341 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>E7</title>
+	<link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="Stats-output"></div>
+<canvas id="draw"></canvas>
+<script src="stats.min.js"></script>
+<script src="dat.gui.min.js"></script>
+<script>
+
+//Stats
+{
+	function initStats() {
+	var stats = new Stats();
+	stats.setMode(0);
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.left = '0px';
+	stats.domElement.style.top = '0px';
+	document.getElementById("Stats-output").append(stats.domElement );
+	return stats;
+	}
+	var stats = initStats();
+}
+//инициализация контекста
+{
+	draw.width=window.innerWidth; // длина и ширина полотна
+	draw.height=window.innerHeight;
+	z=draw.getContext("2d"); // контекст
+}
+// технические константы
+const TC = {
+  Color: 'rgba(0,0,0,0.1)',
+  W: window.innerWidth,
+  H: window.innerHeight,
+  radius: 25,
+};
+
+z.lineWidth = 1;
+// физифческие константы
+PC = {
+  G: 0.01, // грав постоянная
+  grav: 50, //
+  antigrav: 50, // дистанция равенства сил
+  speedc: 10, // скорость света
+  kz: 0.01, // коэф замедления среды
+};
+//GUI
+{
+  var gui = new dat.GUI();
+  var effectController = {
+    G: PC.G,
+    grav: PC.grav,
+    antigrav: PC.antigrav, // дистанция равенства сил
+    speedc: PC.speedc, // скорость света
+  };
+  gui.add(effectController, 'G', 0,1,0.05);
+  gui.add(effectController, 'grav', 1,100,10);
+  gui.add(effectController, 'antigrav', 1,100,10);
+  gui.add(effectController, 'speedc', 1,100,10);
+  var button1 = {
+    addAtom: function() { ex.addAtom(); }
+  };
+  var button2 = {
+    removeAtom: function() { ex.removeAtom(); }
+  };
+  gui.add(button1, 'addAtom');
+  gui.add(button2, 'removeAtom');
+}
+//model
+class Vektor{
+  constructor(x = 0, y = 0) {
+    this.x = x;
+    this.y = y;
+  }
+  add(vektor) {
+    return new Vektor(this.x + vektor.x, this.y + vektor.y);
+  }
+  sadd(vektor) {
+    this.x += vektor.x;
+    this.y += vektor.y;
+  }
+  sub(vektor) {
+    return new Vektor(this.x - vektor.x, this.y - vektor.y);
+  }
+  ssub(vektor) {
+    this.x -= vektor.x;
+    this.y -= vektor.y;
+  }
+  mul(n) {
+    return new Vektor(this.x * n, this.y * n);
+  }
+  smul(n) {
+    this.x *= n;
+    this.y *= n;
+  }
+}
+const genColor = function GenColor() { // рандомный цвет
+  const r = Math.floor(Math.random()*205 + 50);
+  const g = Math.floor(Math.random()*205 + 50);
+  const b = Math.floor(Math.random()*205 + 50);
+  return 'rgb(' + r.toString(10) + ',' + g.toString(10) + ',' + b.toString(10) + ')';
+};
+const genPos = function GenPos() {
+  const x = Math.random()*(TC.W - 20) + 10;
+  const y = Math.random()*(TC.H - 20) + 10;
+  return new Vektor(x, y);
+};
+class Particle{
+  constructor(){
+    this.pos = genPos();
+    this.speed = new Vektor();
+    this.color = genColor();
+    this.connections = false;
+  }
+}
+class Connection{
+  constructor(link) {
+    this.link = link;
+    this.flag = false;
+  }
+}
+//model
+class Star{
+  constructor(){
+    this.x = Math.random()*(TC.W - 20) + 10;
+  	this.y = Math.random()*(TC.H - 20) + 10;
+    this.vx = 0;// скорость
+	this.vy = 0;
+	this.ax = 0;
+	this.ay = 0;
+    this.connections = [];
+    this.flag = false;
+	this.color = this.GenC();
+  }
+  GenC() { // рандомный цвет
+  	const r = Math.floor(Math.random()*205 + 50);
+    const g = Math.floor(Math.random()*205 + 50);
+    const b = Math.floor(Math.random()*205 + 50);
+  	return 'rgb(' + r.toString(10) + ',' + g.toString(10) + ',' + b.toString(10) + ')';
+  }
+}
+//model
+class Stars {
+  constructor(n){
+    this.matrix = [];
+	for (let i = 0; i < n; i += 1) {
+      this.matrix.push(new Star());
+	}
+  }
+  print() { //view
+    this.matrix.forEach((star) => {
+      z.beginPath();
+      z.arc(star.x, star.y, TC.radius, 0, Math.PI*2, false);
+      z.fillStyle = star.color;
+      z.fill();
+      star.k = 0;
+    });
+    this.matrix.forEach((star) => {
+      z.beginPath();
+      z.moveTo(star.x, star.y);
+      z.lineTo(star.x + star.vx*50, star.y + star.vy*50);
+      z.strokeStyle = 'white';
+      z.stroke();
+      z.fill();
+      star.connections.forEach((connection) => {
+        z.beginPath();
+        z.moveTo(star.x, star.y);
+        z.lineTo(connection.x, connection.y);
+        z.strokeStyle = 'red';
+        z.stroke();
+        z.fill();
+	  });
+    })
+  }
+  addAtom() {
+    this.matrix.push(new Star());
+  }
+  removeAtom() { //убрать атом
+  	this.matrix.pop();
+  }
+  speed(a, b) { //сложение скоростей
+  	const c = (a + b) / (1 + a*b / (effectController.speedc*effectController.speedc));
+  	return c;
+  }
+  gravy() { //движение
+	const stars = this.matrix;
+	const rad = effectController.antigrav; // радиус связи
+	const dist = rad * (1.1); // радиус отсутствия связи
+    const limit = 4; // число возможных связей
+
+  	for ( let i = 0; i < stars.length; i += 1) { // вычисление ускорений и новых соединений
+      stars[i].flag = false;
+      for (let j = i + 1; j < stars.length; j += 1) {
+		if (stars[i].connections.some((connection) => {return connection === stars[j]})) continue;
+		//if (stars[i].connections[0] === stars[j] || stars[i].connections[1] === stars[j]) continue;
+
+        const sx = stars[i].x - stars[j].x;
+        const sy = stars[i].y - stars[j].y;
+        const S = Math.sqrt(sx*sx + sy*sy); // r
+
+        if (S > rad) continue;
+        if ((stars[i].connections.length < limit) && (stars[j].connections.length < limit)) { // назначение соединения
+          stars[i].connections.push(stars[j]);
+          stars[j].connections.push(stars[i]);
+          continue;
+		}
+
+        const g = 0; //Math.pow((rad)/(S), 2); // сила притяжения
+        const d = Math.pow((rad)/(S), 4); // сила отталкивания
+        const f = (g - d);
+
+        const fx = (sx / Math.abs(sx)) * effectController.G*(f);
+        const fy = (sy / Math.abs(sy)) * effectController.G*(f);
+
+        stars[j].vx += fx;
+        stars[j].vy += fy;
+
+        stars[i].vx -= fx;
+        stars[i].vy -= fy;
+      }
+    }
+    stars.forEach((star) => { // вычисление поправки скорости соединенных частиц
+  	  if (star.connections.length) {
+        star.x += star.vx;
+        star.y += star.vy;
+
+  	    star.connections.forEach((connection) => {
+  	      if (!connection.flag) {
+            const px = connection.x + connection.vx;
+            const py = connection.y + connection.vy;
+
+            const sx = star.x - px;
+            const sy = star.y - py;
+            const s = Math.sqrt((sx*sx + sy*sy));
+
+            const a = (s - rad) / 2;
+            const ax = sx*(a / s);
+            const ay = sy*(a / s);
+
+            star.ax -= ax;
+            star.ay -= ay;
+
+            connection.ax += ax;
+            connection.ay += ay;
+		  }
+		});
+
+        star.ax *= 0.5; // ??
+        star.ay *= 0.5;
+        star.x += star.ax;
+        star.y += star.ay;
+        star.vx += star.ax;
+        star.vy += star.ay;
+        star.ax = 0;
+        star.ay = 0;
+        star.vx *= (1 - PC.kz);
+        star.vy *= (1 - PC.kz);
+
+        star.flag = true;
+      }
+      else { // не соединенные
+        star.x += star.vx;
+        star.y += star.vy;
+        star.vx *= (1 - PC.kz);
+        star.vy *= (1 - PC.kz);
+	  }
+    });
+  }
+}
+
+const ex = new Stars(20);
+console.dir(ex);
+// обраотчики
+{
+  document.tar;
+  flag = false;
+  const mouse = function (event) {
+    //console.log(event.type);
+    //console.dir(event);
+    if (event.type === 'mousedown') {
+      ex.matrix.forEach((star) => {
+        if (((star.x - event.x)**2 + (star.y - event.y)**2) <= TC.radius**2){
+          tar = star;
+          flag = true;
+        }
+      });
+    }
+    else {
+      flag = false;
+    }
+    //console.log(flag);
+  };
+  const mouseM = function(event) {
+    if (!flag) return;
+    tar.vx += (event.x - tar.x)*0.1;
+    tar.vy += (event.y - tar.y)*0.1;
+  };
+  document.getElementById('draw').onmousedown = mouse;
+  document.getElementById('draw').onmouseup = mouse;
+  document.getElementById('draw').onmousemove = mouseM;
+}
+//
+function telescope() {
+  z.fillStyle = TC.Color;
+  z.fillRect(0, 0, TC.W, TC.H);
+};
+//анимация
+
+function anim() {
+  window.requestAnimationFrame(anim);
+  stats.update();
+  telescope();
+
+  ex.print();
+  ex.gravy();
+};
+/*
+fps = 1;
+function anim() {
+  function loop() {
+    setTimeout(() => {
+	  requestAnimationFrame(loop);// не блокирует поток!
+      stats.update();
+      telescope();
+
+      ex.print();
+      ex.gravy();
+    }, 1000 / fps);
+  }
+  loop.call(this);
+}*/
+
+// вызов анимации
+anim();
+</script>
+</body>
+</html>

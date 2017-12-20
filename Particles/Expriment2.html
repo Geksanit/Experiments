@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>L2</title>
+	<link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="Stats-output"></div>
+<canvas id="draw"></canvas>
+<script src="stats.min.js"></script>
+<script src="dat.gui.min.js"></script>
+<script>
+//для сайта quarz.ucoz.ru
+
+//Stats
+/*{
+	function initStats() {
+	var stats = new Stats();
+	stats.setMode(0);
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.left = '0px';
+	stats.domElement.style.top = '0px';
+	//document.getElementById("Stats-output").append(stats.domElement );
+	return stats;
+	}
+	var stats = initStats();
+}*/
+//GUI
+{
+	var gui = new dat.GUI();
+	var effectController = {
+	G:0.1,
+	grav: 50,
+	antigrav: 50,//дистанция равенства сил
+	speedc: 10,//скорость света
+	}
+	gui.add(effectController,'G',0,1,0.05);
+	gui.add(effectController,'grav',1,100,10);
+	gui.add(effectController,'antigrav',1,100,10);
+	gui.add(effectController,'speedc',1,100,10);
+	var button1 = {
+		addAtom: function() {addAtom();}
+	}
+	var button2 = {
+		removeAtom: function() {removeAtom();}
+	}
+	gui.add( button1, 'addAtom' );
+	gui.add( button2, 'removeAtom' );
+
+}
+
+//инициализация контекста
+{
+	draw.width=window.innerWidth;//длина и ширина полотна
+	draw.height=window.innerHeight;
+	z=draw.getContext("2d");//контекст
+}
+//настройки отображения
+{
+	Set={
+		Color : 'rgba(0,0,0,0.1)',
+		W: window.innerWidth,
+		H: window.innerHeight,
+		G: 0.01,
+	};
+	length  = 1000;
+	metr = 50;
+	stars = [];
+	z.lineWidth = 1;
+};
+//функции
+{
+	function telescope()
+	{
+		z.fillStyle = Set.Color;
+		z.fillRect(0, 0, Set.W, Set.H);
+	};
+	function print()//отрисовка
+	{
+		for (i = 0; i < stars.length; i++){
+			z.beginPath();
+			z.arc(stars[i].x,stars[i].y,5,0,Math.PI*2,false);
+			z.fillStyle = stars[i].color;
+			z.fill();
+		}
+	}
+	function init_Structure()//создание структуры
+	{	
+		for (i = 0; i < length; i++){stars[i] = prototip()}
+	}
+	function prototip()//прототип атома
+	{
+		a = {
+			vx: 0,
+			vy: 0,
+			x : Math.random()*(Set.W -20)+10, 
+			y : Math.random()*(Set.H -20)+10,
+			mass: 1,
+		}
+		a.color = GenC();
+		return a
+	}
+	function addAtom()//добавить атом
+	{
+		stars[stars.length] = prototip();
+	}
+	function removeAtom()//убрать атом
+	{
+		stars.pop();
+	}
+	function GenC()//цвет
+	{
+		r = Math.floor(Math.random()*205+50);
+		g = Math.floor(Math.random()*205+50);
+		b = Math.floor(Math.random()*205+50);
+		return 'rgb('+r.toString(10)+',' + g.toString(10)+',' + b.toString(10)+')';
+	};
+	function speed(a,b)//сложение скоростей
+	{
+		c=(a+b)/(1+a*b/(effectController.speedc*effectController.speedc))
+		return c
+	}
+	function gravy()//движение
+	{
+		for (i = 0; i < stars.length; i++){
+			for(j = i+1; j < stars.length; j++){
+				var sx,sy,s,S,g;
+				sx=stars[i].x-stars[j].x;
+				sy=stars[i].y-stars[j].y;
+				s=(sx*sx+sy*sy);//r**2
+				S=Math.sqrt(s);//r
+				
+				
+				d=Math.pow((effectController.antigrav)/(S),4);
+				g=Math.pow((effectController.antigrav)/(S),2);			
+				
+				stars[j].vx = speed(stars[j].vx, (sx/Math.abs(sx))*effectController.G*(g-d));
+				stars[j].vy = speed(stars[j].vy, (sy/Math.abs(sy))*effectController.G*(g-d));
+			
+				stars[i].vx = speed(stars[i].vx, -(sx/Math.abs(sx))*effectController.G*(g-d));
+				stars[i].vy = speed(stars[i].vy, -(sy/Math.abs(sy))*effectController.G*(g-d));	
+			}
+			stars[i].x+=stars[i].vx; stars[i].vx*=0.9;
+			stars[i].y+=stars[i].vy; stars[i].vy*=0.9;
+		}
+	}
+};
+
+//анимация
+function anim()
+{
+	window.requestAnimationFrame(anim);
+	//stats.update(); 
+	telescope();
+	print();
+	gravy();
+};
+//вызов анимации
+init_Structure();
+anim();
+</script>
+</body>
+</html>

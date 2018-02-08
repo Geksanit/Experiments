@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, width=device-width">
+    <title>Waves</title>
+  <link href="index.css" rel="stylesheet"></head>
+  <body>
+    <main>
+      <h1>Waves 3</h1>
+      <div class="game">
+        <table id="board"></table>
+        <div id="controls">
+          <div class="container">
+            <button class="standart-button standart-button_blue standart-button_small standart-button_blue-small">start</button>
+            <button class="standart-button standart-button_blue standart-button_small standart-button_blue-small">pause</button>
+            <button class="standart-button standart-button_blue standart-button_small standart-button_blue-small">clear</button>
+          </div>
+          <div class="container">
+            <div class="label">speed</div>
+            <div class="slider">
+              <div class="slider__view">10</div><input class="slider" oninput="sliderInput(event)" type="range" min="1" max="10" value="10">
+            </div>
+          </div>
+          <div class="container">
+            <div class="label">width</div>
+            <div class="slider">
+              <div class="slider__view">100</div><input class="slider" oninput="sliderInput(event)" type="range" min="0" max="100" value="100">
+            </div>
+          </div>
+          <div class="container">
+            <div class="label">height</div>
+            <div class="slider">
+              <div class="slider__view">100</div><input class="slider" oninput="sliderInput(event)" type="range" min="0" max="100" value="100">
+            </div>
+          </div>
+        </div>
+      </div>
+      <section>
+        <p>Интерференция волн.</p>
+      </section>
+    </main>
+  <script type="text/javascript" src="index.js"></script></body>
+</html>

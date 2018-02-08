@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>L2</title>
+	<link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="Stats-output"></div>
+<canvas id="draw"></canvas>
+<script src="stats.min.js"></script>
+<script src="dat.gui.min.js"></script>
+<script>
+//для сайта quarz.ucoz.ru
+
+//Stats
+{
+	function initStats() {
+	var stats = new Stats();
+	stats.setMode(0);
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.left = '0px';
+	stats.domElement.style.top = '0px';
+	//document.getElementById("Stats-output").append(stats.domElement );
+	return stats;
+	}
+	var stats = initStats();
+}
+//GUI
+{
+	var controls = new function() {this.rotationR2 = 0;}
+	var gui = new dat.GUI();
+	gui.add(controls, 'rotationR2',-2,2);
+	var controlz = new function() {this.rotationV = 0;}
+	gui.add(controlz, 'rotationV',-2,2);
+}
+
+//инициализация
+{
+	draw.width=window.innerWidth;//длина и ширина полотна
+	draw.height=window.innerHeight;
+	z=draw.getContext("2d");//контекст
+}
+//настройки отображения
+{
+	Set={
+	Color : 'rgba(0,0,0,0.1)',
+	W: window.innerWidth,
+	H: window.innerHeight,
+	X: window.innerWidth/2,
+	Y: window.innerHeight/2,
+	};
+	R1={
+	Color: 'rgba(100,100,100,1.00)',
+	O:10,
+	X: window.innerWidth/2,
+	Y: window.innerHeight/2,
+	bx: 100,
+	by: 100,
+	line: 1,
+	}
+	R2={
+	Color: 'rgba(150,150,150,1.00)',
+	O: 5,
+	C:{x:0,y:0},
+	bx: {x:0.5,y:0},
+	by: {x:0,y:0.5},
+	line: 3,
+	}
+	z.lineWidth = 1;
+	vector={
+	x:4,
+	y:2,
+	b:0,
+	color: 'rgba(255,200,0,1)',
+	};
+};
+//функции
+{
+	function sum(a,b)//сумма двух векторов
+	{
+		a.x+=b.x;
+		a.y+=b.y;
+		return a
+	}
+	function mult(a,l)//умножение на скаляр
+	{
+		a.x=a.x*l;
+		a.y=a.y*l;
+		return a
+	}
+	function min(a)//противоположный вектор
+	{
+		a.x=-a.x;
+		a.y=-a.y;
+		return a
+	}
+};
+function telescope()
+{
+	z.fillStyle = Set.Color;
+	z.fillRect(0, 0, Set.W, Set.H);
+};
+function obraz1(vektor)
+{
+	s={
+	x: R1.X+vektor.x*R1.bx,
+	y: R1.Y-vektor.y*R1.by,
+	}
+	return s
+};
+function obraz2(vektor)
+{
+	s={
+	x: R2.C.x+vektor.x*R2.bx.x+vektor.y*R2.by.x,
+	y: R2.C.y+vektor.y*R2.by.y+vektor.x*R2.bx.y,
+	}
+	return s
+};
+function obraz3(vektor)
+{
+	t=obraz2(vektor);
+	s=obraz1(t)
+	return s
+};
+function rotation(vektor,alfa)
+{
+	c=(Math.PI/180)*alfa;
+	d={
+	x:vektor.x*Math.cos(c)-vektor.y*Math.sin(c),
+	y:vektor.x*Math.sin(c)+vektor.y*Math.cos(c),
+	}	
+	return d
+}
+function printR1()
+{
+	z.lineWidth = R1.line;
+	z.beginPath();
+		n=(Set.W-R1.X)/R1.bx;
+		for(i=0;i<n;i++)
+		{z.moveTo(R1.bx*i+R1.X,0); z.lineTo(R1.bx*i+R1.X,Set.H);}
+		n=(R1.X)/R1.bx;
+		for(i=1;i<n;i++)
+		{z.moveTo(R1.X-R1.bx*i,0); z.lineTo(R1.X-R1.bx*i,Set.H);}
+		n=(Set.H-R1.Y)/R1.by;
+		for(i=0;i<n;i++)
+		{z.moveTo(0,R1.by*i+R1.Y); z.lineTo(Set.W,R1.by*i+R1.Y);}
+		n=(R1.Y)/R1.by;
+		for(i=1;i<n;i++)
+		{z.moveTo(0,R1.Y-R1.by*i); z.lineTo(Set.W,R1.Y-R1.by*i);}
+		z.strokeStyle = R1.Color;
+		z.stroke();
+	z.closePath();
+	
+	z.beginPath();
+		z.arc(R1.X,R1.Y,R1.O,0,Math.PI*2,false);
+		z.fillStyle=R1.Color;
+		z.fill();
+	z.closePath();
+};
+function printR2()
+{
+	z.lineWidth = R2.line;
+		o=obraz1(R2.C);
+		a=obraz1(R2.bx);
+		b=obraz1(R2.by);
+	z.beginPath();
+		z.arc(o.x,o.y,R2.O,0,Math.PI*2,false);
+		z.fillStyle=R2.Color;
+		z.fill();
+	z.closePath();
+	z.beginPath();
+		z.moveTo(o.x,o.y);z.lineTo(a.x,a.y);
+		z.moveTo(o.x,o.y);z.lineTo(b.x,b.y);
+		z.strokeStyle = R2.Color;
+		z.stroke();
+	z.closePath();
+	z.beginPath();
+		z.fillStyle=R2.Color;
+		z.arc(a.x,a.y,R2.O,0,Math.PI*2,false);
+		z.fill();
+		z.arc(b.x,b.y,R2.O,0,Math.PI*2,false);
+		z.fill();
+	z.closePath();
+};
+function test()
+{
+	c=rotation(vector,controlz.rotationV);
+	vector.x=c.x;
+	vector.y=c.y;
+	
+	R2.bx=rotation(R2.bx,controls.rotationR2);
+	R2.by=rotation(R2.by,controls.rotationR2);
+};
+function print()
+{
+	z.strokeStyle = vector.color;
+	z.beginPath();
+		o=obraz3(R2.C);
+		a=obraz3(vector);
+		z.moveTo(o.x,o.y);z.lineTo(a.x,a.y);
+		z.stroke();
+	z.closePath();
+};
+
+//анимация
+function anim(){
+  	window.requestAnimationFrame(anim);
+		stats.update(); 
+		telescope();
+		printR1();
+		printR2();
+		print();
+		test();
+	};
+//вызов анимации
+anim();
+</script>
+</body>
+</html>

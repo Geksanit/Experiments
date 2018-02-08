@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>E8</title>
+	<link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="Stats-output"></div>
+<canvas id="draw"></canvas>
+<script src="stats.min.js"></script>
+<script src="dat.gui.min.js"></script>
+<script>
+
+//инициализация контекста
+{
+	draw.width=window.innerWidth; // длина и ширина полотна
+	draw.height=window.innerHeight;
+	z=draw.getContext("2d"); // контекст
+}
+const TC = {
+  radius: 5,
+  dist: 200,
+  angle: Math.PI / 6,
+};
+const printRadius = (obj) => {
+  z.beginPath();
+  z.arc(obj.x + 500, obj.y + 500, TC.dist, 0, Math.PI*2, false);
+  z.strokeStyle = obj.color;
+  z.stroke();
+  z.closePath();
+};
+const printVector = (obj, vec) => {
+  z.beginPath();
+  z.moveTo(obj.x+500, obj.y+500);
+  z.lineTo(obj.x+500 + vec.x, obj.y+500 + vec.y);
+  z.strokeStyle = 'orange';
+  z.stroke();
+  z.fill();
+  z.closePath();
+};
+const printDot = (obj) => {
+  z.beginPath();
+  z.arc(obj.x + 500, obj.y + 500, TC.radius, 0, Math.PI*2, false);
+  z.fillStyle = obj.color;
+  z.fill();
+  console.dir(obj);
+};
+const getDist = (a, b) => {
+  const sx = a.x - b.x;
+  const sy = a.y - b.y;
+  return Math.sqrt(sx*sx + sy*sy); // r
+};
+const getVec = (obj1, obj2) => {
+  const sx = obj1.x - obj2.x;
+  const sy = obj1.y - obj2.y;
+  const s = Math.sqrt((sx*sx + sy*sy));
+
+  const a = (s - TC.dist) / 2;
+  const ax = sx*(a / s);
+  const ay = sy*(a / s);
+  console.log(s, a, ax, ay);
+  printVector(obj2,{x:ax, y:ay});
+  printVector(obj1,{x:-ax, y:-ay});
+
+  obj1.ax -= ax;
+  obj1.ay -= ay;
+
+  obj2.ax += ax;
+  obj2.ay += ay;
+};
+const setSpeed = (obj) => {
+  obj.vx+=obj.ax; obj.x+=obj.vx; obj.ax=0;
+  obj.vy+=obj.ay; obj.y+=obj.vy; obj.ay=0;
+};
+const O = {
+  x: 0,
+  y: 0,
+  color: 'white',
+  vx: 0,
+  vy: 0,
+  ax: 0,
+  ay: 0,
+};
+const A = {
+  x: O.x - (Math.sin(TC.angle) * TC.dist),
+  y: O.y - (Math.cos(TC.angle) * TC.dist),
+  color: 'yellow',
+  vx: 0,
+  vy: -150,
+  ax: 0,
+  ay: 0,
+};
+const B = {
+  x: O.x + (Math.sin(TC.angle) * TC.dist),
+  y: O.y - (Math.cos(TC.angle) * TC.dist),
+  color: 'red',
+  vx: 0,
+  vy: -150,
+  ax: 0,
+  ay: 0,
+};
+const stars = [O, A, B];
+stars.forEach((element) => {printDot(element)});
+console.log(getDist(A, O));
+console.log(getDist(B, O));
+console.log(getDist(A, B));
+
+printDot(O);
+printDot(A);
+printDot(B);
+
+printVector(A,{x:A.vx, y:A.vy});
+printVector(B,{x:B.vx, y:B.vy});
+
+A.y += A.vy; B.y += B.vy;
+getVec(A, O);
+getVec(B, O);
+
+printVector(A,{x:A.ax, y:A.ay});
+printVector(B,{x:B.ax, y:B.ay});
+printVector(O,{x:O.ax, y:O.ay});
+
+printRadius(A);
+printRadius(B);
+printRadius(O);
+
+setSpeed(A);setSpeed(B);setSpeed(O);
+getVec(A, O);
+getVec(B, O);
+printVector(A,{x:A.vx, y:A.vy});printVector(B,{x:B.vx, y:B.vy});printVector(O,{x:O.vx, y:O.vy});
+printRadius(A);printRadius(B);printRadius(O);
+</script>
+</body>
+</html>

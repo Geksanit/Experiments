@@ -170,7 +170,7 @@ document.getElementById('draw').onmousemove = mouseM;
 				
 				
 				d=Math.pow((effectController.antigrav)/(S),4);
-				g=Math.pow((effectController.antigrav)/(S),2);			
+				g=Math.pow((effectController.antigrav)/(S),2);
 				
 				stars[j].vx = speed(stars[j].vx, (sx/Math.abs(sx))*effectController.G*(g-d));
 				stars[j].vy = speed(stars[j].vy, (sy/Math.abs(sy))*effectController.G*(g-d));

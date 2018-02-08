@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Galaxy</title>
+	<link href="style.css" rel="stylesheet" type="text/css">
+	<link href="script.js"  type="text/javascript">
+	<link href="Stats.js" type="text/javascript">
+	<link href="zepto.min.js" type="text/javascript">
+
+</head>
+<body>
+<canvas id="draw"></canvas>
+<script>
+	//для сайта quarz.ucoz.ru
+	
+	//инициализация
+	draw.width=window.innerWidth;//длина и ширина полотна
+	draw.height=window.innerHeight;
+	z=draw.getContext("2d");//контекст
+	//настройки отображения
+	Set={
+	Time : 1,// коэф. времени
+	G : 1,//гравитационная постоянная
+	Color : 'rgba(0, 0, 0, 0.1)',//длина хвоста/цвет перекраски
+	Radius : 1,//коэф.размера звезд
+	Width : window.innerWidth,//границы
+	Hight : window.innerHeight,
+	};
+	//физические переменные
+	star={x: 10, y: 10, color: 'rgba(255,0,0,1)', mass: 2, radius: 2, vx: 1, vy: 1,},
+			
+	length=100;
+	stars=[];
+
+	//функции
+	
+	//перекраска всех фигур
+	function telescope()
+	{
+		z.fillStyle = Set.Color;
+  	z.fillRect(0, 0, Set.Width, Set.Hight);
+	}
+	//перекраска
+	function print(d)
+	{
+		z.beginPath();
+		z.arc(d.x,d.y,d.radius,0,Math.PI*2,false);
+		z.fillStyle=d.color;
+		z.fill();
+	};
+	//случайный цвет
+	function rc()
+	{
+		var r=Math.floor(Math.random() * (256));
+		var g=Math.floor(Math.random() * (256));
+		var b=Math.floor(Math.random() * (256));
+		return '#'+ r.toString(16) + g.toString(16) + b.toString(16);
+	};
+	
+function pro(i)
+{	var l = stars[i];
+	l.radius = Math.sqrt(l.mass/Math.PI);
+};
+	
+	function genstar()//генерация звезд
+	{
+		stars[0]={
+			x: window.innerWidth/2,
+			y: window.innerHeight/2,
+			vx:0,
+			vy:0,
+			color: 'rgba(255,255,255,1)',
+			mass:50,
+			radius:10,
+		};
+		var i;
+		for (i = 1; i < length; i++)
+		{
+			stars[i] = {
+				x : Math.random()*(Set.Width -20)+10, 
+				y : Math.random()*(Set.Hight -20)+10,
+				/*vx : Math.random() * (2),
+				vy : Math.random() * (2),*/
+				vx : 0, vy: 0,
+				color : rc(),
+				mass : Math.random()*(10-1)+1,
+				radius :1,
+				};
+			pro(i);
+		}
+	}
+function Particle(i)//Genesis
+{
+	var a = stars[i];
+	a.x = Math.random() * (Set.Width-20)+10;
+	a.y = Math.random() * (Set.Hight-20)+10;
+	a.vx = -1 + Math.random() * 2;
+	a.vy = -1 + Math.random() * 2;
+	a.mass = Math.random()*(10-1)+1;
+	//a.radius = Math.sqrt(a.mass/Math.PI);
+	pro(i);
+	a.color = rc();
+};	
+	//гравитация вся
+	function gravyti(b)
+	{
+		for (var i = b+1; i < stars.length; i++)
+			{
+				var sx,sy,s,g,S;
+				sx=stars[i].x-stars[b].x;
+				sy=stars[i].y-stars[b].y;
+				s=(sx*sx+sy*sy);
+				S=Math.sqrt(s);
+				if(S<=stars[b].radius || S<=stars[i].radius)
+				{
+					if(stars[b].mass>=stars[i].mass)
+					{
+						stars[b].vx=(stars[b].mass*stars[b].vx+stars[i].mass*stars[i].vx)/(stars[b].mass+stars[i].mass);
+						stars[b].vy=(stars[b].mass*stars[b].vy+stars[i].mass*stars[i].vy)/(stars[b].mass+stars[i].mass);
+						stars[b].mass+=stars[i].mass;
+						pro(b);
+						//Particle(i);
+						stars.splice(i,1);
+					}
+					else
+					{
+						stars[b].vx=(stars[b].mass*stars[b].vx+stars[i].mass*stars[i].vx)/(stars[b].mass+stars[i].mass);
+						stars[b].vy=(stars[b].mass*stars[b].vy+stars[i].mass*stars[i].vy)/(stars[b].mass+stars[i].mass);
+						stars[i].mass+=stars[b].mass;
+						pro(i);
+						//Particle(b);
+						stars.splice(b,1);
+					}
+				}
+				else
+				{				
+					g=S/((stars[i].mass*Set.G)/s);
+					stars[b].vx+=sx/g;
+					stars[b].vy+=sy/g;
+				
+					g=S/((stars[b].mass*Set.G)/s);
+					stars[i].vx-=sx/g;
+					stars[i].vy-=sy/g;		
+				}
+			};
+	};
+	function kinet(c)//взаимодействие с границами
+	{
+		var f1=false,f2=false;
+		if (c.y < 10 || c.y > (Set.Hight-10))
+			{f1=true;}
+			else{c.y += c.vy;};
+		if (c.x < 10 || c.x > (Set.Width-10))
+			{f2=true;}
+			else{c.x += c.vx};
+		if(f1){c.y -= c.vy; c.vy = -c.vy/2};
+		if(f2){c.x -= c.vx; c.vx = -c.vx/2};
+	};
+	
+	//рисование
+	function anim(){
+  	window.requestAnimationFrame(anim);
+		
+		telescope();//очистка
+		for (var i = 0; i < stars.length; i++)//обработка
+		{
+			print(stars[i]);//рисовка
+			//kinet(stars[i]);
+			stars[i].x += stars[i].vx; stars[i].y += stars[i].vy;
+			gravyti(i);
+		};	
+	};
+	//подготовка
+	genstar();
+	anim();
+	</script>
+</body>
+</html>

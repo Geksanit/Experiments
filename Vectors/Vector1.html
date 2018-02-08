@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>L2</title>
+	<link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="Stats-output"></div>
+<canvas id="draw"></canvas>
+<script src="stats.min.js"></script>
+<script>
+//для сайта quarz.ucoz.ru
+//Stats
+{
+	function initStats() {
+	var stats = new Stats();
+	stats.setMode(0);
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.left = '0px';
+	stats.domElement.style.top = '0px';
+	document.getElementById("Stats-output").append(stats.domElement );
+	return stats;
+	}
+	var stats = initStats();
+}	
+//инициализация
+{
+	draw.width=window.innerWidth;//длина и ширина полотна
+	draw.height=window.innerHeight;
+	z=draw.getContext("2d");//контекст
+}
+//настройки отображения
+{
+	Set={
+	Color : 'rgba(0,0,0,0.1)',
+	W: window.innerWidth,//границы
+	H: window.innerHeight,
+	X: window.innerWidth/2,//начало координат
+	Y: window.innerHeight/2,
+	};
+	z.lineWidth = 1;
+	vector={
+	x:500.0,
+	y:200.0,
+	b:0,
+	color: 'rgba(255,200,0,1)',
+	};
+};
+//функции
+
+function telescope()//перекраска всех фигур
+{
+	z.strokeStyle = 'rgba(255,255,255,1.00)';
+	z.fillStyle = Set.Color;
+  z.fillRect(0, 0, Set.W, Set.H);
+	z.beginPath();
+	z.moveTo(100,Set.Y); z.lineTo(Set.W-100,Set.Y);
+	z.moveTo(Set.X,100); z.lineTo(Set.X,Set.H-100);
+	z.stroke();
+	z.closePath();
+};
+function test()
+{
+	
+	a=(Math.PI/180)*vector.b;
+	vector.b=1;
+	x=vector.x;
+	y=vector.y;
+	vector.x=x*Math.cos(a)-y*Math.sin(a);
+	vector.y=x*Math.sin(a)+y*Math.cos(a);
+	/*
+	a=(Math.PI/180)*vector.b;
+	vector.b+=31;
+	vector.x=500*Math.cos(a);
+	vector.y=500*Math.sin(a);
+	*/
+};
+function print()
+{
+	z.strokeStyle = vector.color;
+	z.beginPath();
+	z.moveTo(Set.X,Set.Y); z.lineTo(vector.x+Set.X,Set.Y-vector.y);
+	z.stroke();
+	z.closePath();
+};
+//рисование
+function anim(){
+  	window.requestAnimationFrame(anim);
+		stats.update(); 
+		telescope();//очистка
+		test()
+		print()
+		setTimeout(1000)
+	};
+	//подготовка
+	//genstar();
+	anim();
+</script>
+</body>
+</html>

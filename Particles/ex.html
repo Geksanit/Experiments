@@ -1,0 +1,331 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>E8</title>
+    <link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="Stats-output"></div>
+<canvas id="draw"></canvas>
+<script src="stats.min.js"></script>
+<script src="dat.gui.min.js"></script>
+<script>
+
+  //Stats
+  {
+    function initStats() {
+      var stats = new Stats();
+      stats.setMode(0);
+      stats.domElement.style.position = 'absolute';
+      stats.domElement.style.left = '0px';
+      stats.domElement.style.top = '0px';
+      document.getElementById("Stats-output").append(stats.domElement );
+      return stats;
+    }
+    var stats = initStats();
+  }
+  //инициализация контекста
+  {
+    draw.width=window.innerWidth; // длина и ширина полотна
+    draw.height=window.innerHeight;
+    z=draw.getContext("2d"); // контекст
+  }
+  // технические константы
+  const TC = {
+    Color: 'rgba(0,0,0,0.1)',
+    W: window.innerWidth,
+    H: window.innerHeight,
+    radius: 5,
+    angle: Math.PI / 6,
+  };
+
+  z.lineWidth = 1;
+  // физифческие константы
+  PC = {
+    G: 0.01, // грав постоянная
+    grav: 50, //отключено
+    antigrav: 200, // дистанция оттталкивания и связи
+    speedc: 2, // предельная скорость(скорость света)
+    kz: 0.01, // коэф замедления среды
+  };
+  //GUI
+  {
+    var gui = new dat.GUI();
+    var effectController = {
+      G: PC.G,
+      grav: PC.grav,
+      antigrav: PC.antigrav,
+      speedc: PC.speedc,
+      resistance: PC.kz
+    };
+    gui.add(effectController, 'G', 0,1,0.05);
+    gui.add(effectController, 'grav', 1,100,10);
+    gui.add(effectController, 'antigrav', 1,200,10);
+    gui.add(effectController, 'speedc', 0.1,5,0.1);
+    gui.add(effectController, 'resistance', 0,0.01,0.001);
+    var button1 = {
+      addAtom: function() { ex.addAtom(); }
+    };
+    var button2 = {
+      removeAtom: function() { ex.removeAtom(); }
+    };
+    var button3 = {
+      nextStep: function() { ex.gravy(); ex.print(); }
+    };
+    gui.add(button1, 'addAtom');
+    gui.add(button2, 'removeAtom');
+    gui.add(button3, 'nextStep');
+  }
+  //model
+  class Star{
+    constructor(){
+      this.x = Math.random()*(TC.W - 20) + 10;
+      this.y = Math.random()*(TC.H - 20) + 10;
+      this.vx = 0;// скорость
+      this.vy = 0;
+      this.ax = 0;//ускорение
+      this.ay = 0;
+      this.connections = [];
+      this.flag = false;
+      this.color = this.GenC();
+    }
+    GenC() { // рандомный цвет
+      const r = Math.floor(Math.random()*205 + 50);
+      const g = Math.floor(Math.random()*205 + 50);
+      const b = Math.floor(Math.random()*205 + 50);
+      return 'rgb(' + r.toString(10) + ',' + g.toString(10) + ',' + b.toString(10) + ')';
+    }
+  }
+  //model
+  class Stars {
+    constructor(n){
+      this.matrix = [];
+      for (let i = 0; i < n; i += 1) {
+        this.matrix.push(new Star());
+      }
+    }
+    print() { //view
+      this.matrix.forEach((star) => {
+        z.beginPath();
+        z.arc(star.x, star.y, TC.radius, 0, Math.PI*2, false);
+        z.fillStyle = star.color;
+        z.fill();
+      });
+      this.matrix.forEach((star) => {
+        z.beginPath();
+        z.moveTo(star.x, star.y);
+        z.lineTo(star.x + star.vx, star.y + star.vy);
+        z.strokeStyle = 'white';
+        z.stroke();
+        z.fill();
+        star.connections.forEach((connection) => {
+          z.beginPath();
+          z.moveTo(star.x, star.y);
+          z.lineTo(connection.x, connection.y);
+          z.strokeStyle = 'red';
+          z.stroke();
+          z.fill();
+        });
+      });
+      if (mouse.target) {
+        z.beginPath();
+        z.moveTo(mouse.target.x, mouse.target.y);
+        z.lineTo(mouse.x, mouse.y);
+        z.strokeStyle = 'yellow';
+        z.stroke();
+        z.beginPath();
+        z.arc(mouse.x, mouse.y, 3, 0, Math.PI*2, false);
+        z.fillStyle = 'yellow';
+        z.fill();
+      }
+    }
+    addAtom() {
+      this.matrix.push(new Star());
+    }
+    removeAtom() { //убрать атом
+      this.matrix.pop();
+    }
+    speedC(a, b) { //сложение скоростей
+      return a+b; //(a + b) / (1 + a*b / (effectController.speedc*effectController.speedc));
+    }
+    gravy() { //движение
+      const stars = this.matrix;
+      const rad = effectController.antigrav; // радиус связи
+      const dist = rad * (1.1); // радиус отсутствия связи
+      const limit = 6; // число возможных связей
+      if (mouse.target) {
+        const star = mouse.target;
+        star.ax += (mouse.x - star.x)*0.001;
+        star.ay += (mouse.y - star.y)*0.001;
+        //console.log(star);
+        //console.log(mouse);
+      }
+
+      for ( let i = 0; i < stars.length; i += 1) { // вычисление ускорений и новых соединений
+        for (let j = i + 1; j < stars.length; j += 1) {
+          if (stars[i].connections.some((connection) => {return connection === stars[j]})) continue;
+          //if (stars[i].connections[0] === stars[j] || stars[i].connections[1] === stars[j]) continue;
+
+          const sx = stars[i].x - stars[j].x;
+          const sy = stars[i].y - stars[j].y;
+          const S = Math.sqrt(sx*sx + sy*sy); // r
+          console.log(S, sx, sy, i, j);
+
+          if (S > rad) continue;
+          if ((stars[i].connections.length < limit) && (stars[j].connections.length < limit)) { // назначение соединения
+            stars[i].connections.push(stars[j]);
+            stars[j].connections.push(stars[i]);
+            console.log('new connect');
+            continue;
+          }
+
+          const g = 0; //Math.pow((rad)/(S), 2); // сила притяжения
+          const d = Math.pow((rad)/(S + 0.1), 4); // сила отталкивания
+          const f = (g - d);
+
+          const fx = (sx / Math.abs(sx)) * effectController.G*(f);
+          const fy = (sy / Math.abs(sy)) * effectController.G*(f);
+
+          stars[j].ax += fx;
+          stars[j].ay += fy;
+
+          stars[i].ax -= fx;
+          stars[i].ay -= fy;
+        }
+        stars[i].flag = false;
+        stars[i].vx = this.speedC(stars[i].vx, stars[i].ax); stars[i].ax = 0;
+        stars[i].vy = this.speedC(stars[i].vy, stars[i].ay); stars[i].ay = 0;
+        // console.log(stars[i]);
+      }
+      stars.forEach((star) => { // вычисление поправки скорости соединенных частиц
+        if (star.connections.length) {
+          star.x += star.vx;
+          star.y += star.vy;
+
+          star.connections.forEach((connection) => {
+            if (!connection.flag) {
+              const px = connection.x + connection.vx;
+              const py = connection.y + connection.vy;
+
+              const sx = star.x - px;
+              const sy = star.y - py;
+              const s = Math.sqrt((sx*sx + sy*sy));
+
+              const a = (s - rad) / 2;
+              const ax = sx*(a / s);
+              const ay = sy*(a / s);
+              console.log(s,a,ax,ay);
+              star.ax -= ax;
+              star.ay -= ay;
+
+              connection.ax += ax;
+              connection.ay += ay;
+            }
+          });
+
+          star.ax *= 0.5; // ??
+          star.ay *= 0.5;
+          star.x += star.ax;
+          star.y += star.ay;
+          star.vx = this.speedC(star.vx, star.ax);
+          star.vy = this.speedC(star.vy, star.ay);
+          star.ax = 0;
+          star.ay = 0;
+          star.vx *= (1 - effectController.resistance);
+          star.vy *= (1 - effectController.resistance);
+
+          star.flag = true;
+        }
+        else { // не соединенные
+          star.x += star.vx;
+          star.y += star.vy;
+          star.vx *= (1 - effectController.resistance);
+          star.vy *= (1 - effectController.resistance);
+        }
+      });
+    }
+  }
+
+  const ex = new Stars(0);
+  ex.matrix[0] = {
+    x: 500,
+    y: 500,
+    vx: 0,
+    vy: 0,
+    ax: 0,
+    ay: 0,
+    connections: [],
+    flag: false,
+    color: 'white',
+  };
+  ex.matrix[1] = {
+    x: 501 - (Math.sin(TC.angle) * PC.antigrav),
+    y: 501 - (Math.cos(TC.angle) * PC.antigrav),
+    vx: 0,
+    vy: 0,
+    ax: 0,
+    ay: 0,
+    connections: [],
+    flag: false,
+    color: 'yellow',
+  };
+  ex.matrix[2] = {
+    x: 501 + (Math.sin(TC.angle) * PC.antigrav),
+    y: 501 - (Math.cos(TC.angle) * PC.antigrav),
+    vx: 0,
+    vy: 0,
+    ax: 0,
+    ay: 0,
+    connections: [],
+    flag: false,
+    color: 'orange',
+  };
+  console.dir(ex);
+  const mouse = {
+    x: 0,
+    y: 0,
+    target: false,
+  };
+  // обраотчики
+  {
+    document.getElementById('draw').onmousedown = (event) => {
+      ex.matrix.forEach((star) => {
+        if (((star.x - event.x)**2 + (star.y - event.y)**2) <= TC.radius**2){
+          mouse.target = star;
+          mouse.x = event.x;
+          mouse.y = event.y;
+        }
+      });
+      //console.dir(event);
+    };
+    document.getElementById('draw').onmouseup = (event) => {
+      mouse.target = false;
+      //console.dir(mouse);
+    };
+    document.getElementById('draw').onmousemove = (event) => {
+      if (mouse.target) {
+        mouse.x = event.x;
+        mouse.y = event.y;
+      }
+    };
+  }
+  //
+  function telescope() {
+    z.fillStyle = TC.Color;
+    z.fillRect(0, 0, TC.W, TC.H);
+  };
+  //анимация
+
+
+  telescope();
+  ex.print();
+  ex.gravy();
+  ex.print();
+  ex.matrix[1].vy = -50;
+  ex.matrix[2].vy = -50;
+  ex.gravy();
+  ex.print();
+</script>
+</body>
+</html>
